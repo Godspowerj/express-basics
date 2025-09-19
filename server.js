@@ -1,11 +1,13 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import authenticateTOKEN from "./middleware/auth.js";
+import startDB from "./config/db.js";
+import usersDetails from "./models/user.js";
 
 const app = express();
-const PORT = 3000;
-
+dotenv.config();
 // Middleware to parse JSON request bodies
 app.use(express.json());
 
@@ -16,8 +18,6 @@ app.use(express.json());
 //   { id: 3, title: "Build a REST API", completed: false },
 // ];
 
-//in memory array to store users
-let users = [];
 // CRUD operations for todos
 // app.get("/todos", (req, res) => {
 //   res.json(todos);
@@ -53,22 +53,43 @@ let users = [];
 //   }
 // });
 
-export const secretkey = "your_secret_key";
+startDB();
+
 
 // CRUD operations for users
-app.post("/signup", (req, res) => {
-  const { username, password } = req.body;
-  const existingUser = users.find((user) => user.username === username);
+
+app.get("/users", async (req, res) => {
+  try {
+    const users = await usersDetails.find()
+   res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/users/roles", async (req, res) => {
+  try {
+    const users = await usersDetails.find({role: "admin"})
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+})
+
+
+//signup route
+app.post("/signup", async (req, res) =>  {
+  const { username, password, role } = req.body;
+  const existingUser = await usersDetails.findOne({ username , password });
   if (existingUser) {
     return res.status(400).json({ message: "Username already exists" });
   }
 
   const hashedPassword = bcrypt.hashSync(password, 8);
+  
+  await usersDetails.create({ username, password: hashedPassword , role});
 
-  users.push({ username, password: hashedPassword });
-  console.log(users);
-
-  const token = jwt.sign({ username }, "secretkey", { expiresIn: "1h" });
+  const token = jwt.sign({ username }, process.env.JWT_SECRET , { expiresIn: "1h" });
 
   res.status(201).json({ message: "User registered successfully" , token });
 });
@@ -78,6 +99,6 @@ app.get('/protected', authenticateTOKEN, (req, res) => {
   res.json({ message: `Hello ${req.user.username}, welcome to the protected route!` });
 });
 
-app.listen(PORT, () => {
-  console.log(`server is running on http://localhost:${PORT}`);
+app.listen(process.env.PORT, () => {
+  console.log(`server is running on http://localhost:${process.env.PORT}`);
 });
