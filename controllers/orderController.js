@@ -33,15 +33,11 @@ export const createOrder = async (req, res, next) => {
       .substr(2, 9)}`;
     order.paymentReference = reference;
 
-    // Use the previously defined 'email' variable
-    console.log("📧 Email for payment:", email);
-
     const paymentResult = await paymentService.initializePayment(
       email,
       totalAmountCalculated,
       reference
     );
-    console.log("💳 Payment initialized:", paymentResult.data);
 
     await order.save();
 

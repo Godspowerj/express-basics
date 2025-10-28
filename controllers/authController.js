@@ -40,9 +40,10 @@ export const SignupController = async (req, res, next) => {
 
     res.status(201).json({ message: "User registered successfully", token });
   } catch (error) {
-    next(error);
+    next(new Error("User registration failed"), 400);
   }
 };
+
 
 export const LoginController = async (req, res, next) => {
   try {
@@ -61,7 +62,7 @@ export const LoginController = async (req, res, next) => {
     );
     res.status(200).json({ message: "Login successful", token });
   } catch (error) {
-    next(error);
+    next(new Error("Login failed"), 400);
   }
 };
 
@@ -74,7 +75,10 @@ export const resetPasswordController = async (req, res, next) => {
     }
     const hashedPassword = bcrypt.hashSync(newPassword, 8);
     user.password = hashedPassword;
+
+    //save the updated user password
     await user.save();
+
     await sendEmail({
       to: email,
       subject: "Password Reset Successful 🔒",
